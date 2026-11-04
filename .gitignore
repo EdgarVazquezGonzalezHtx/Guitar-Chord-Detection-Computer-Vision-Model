@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.ipynb_checkpoints/
+artifacts/
+data/raw/*
+!data/raw/.gitkeep
