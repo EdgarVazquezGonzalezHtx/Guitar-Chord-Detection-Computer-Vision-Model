@@ -7,7 +7,7 @@ name = "guitar-chords"
 version = "0.1.0"
 description = "Image-based guitar chord classification baseline"
 requires-python = ">=3.10"
-dependencies = ["torch>=2.2,<3", "Pillow>=10,<13"]
+dependencies = ["torch>=2.2,<3", "torchvision>=0.17,<1", "Pillow>=10,<13", "PyYAML>=6,<7"]
 
 [project.optional-dependencies]
 notebook = ["jupyterlab>=4,<5"]
