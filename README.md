@@ -14,6 +14,10 @@ Hand tracking, fretboard localization, webcam capture, and correctness feedback
 are future work. This baseline classifies whole images; its confidence is not
 calibrated and does not establish correct finger placement.
 
+## Dataset
+
+Data set was downloaded from https://universe.roboflow.com/zhenyuandaxian/detection-model-for-guitar-chord/dataset/6. 
+
 ## Setup
 
 Requires Python 3.10+.
