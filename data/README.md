@@ -1,6 +1,16 @@
-# Dataset placeholder
+# Dataset
 
-No dataset is included or downloaded. Add licensed JPG/PNG images to
+Place the YOLO export under `raw/` with `data.yaml` and the supplied
+`train/`, `valid/`, and `test/` directories. Each split has `images/`
+and `labels/` directories. Image and label filenames share a stem.
+
+The ResNet-18 workflow uses these splits as supplied and reads each
+image's chord ID from its label file. It applies the pretrained model's
+deterministic preprocessing with no added augmentation.
+
+## Class-folder baseline
+
+To use the original small CNN baseline, add licensed JPG/PNG images to
 `raw/<chord>/`, using these exact folder names:
 
 `A`, `Am`, `B7`, `Bm`, `C`, `D`, `D7`, `Dm`, `Em`, `F`, `G`.

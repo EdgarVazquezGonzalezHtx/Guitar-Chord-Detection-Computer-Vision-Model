@@ -56,7 +56,14 @@ def resnet18_preprocessing():
     """Build the deterministic input transform for pretrained ResNet-18."""
     from torchvision.models import ResNet18_Weights
 
-    return ResNet18_Weights.DEFAULT.transforms()
+    return ResNet18_Weights.IMAGENET1K_V1.transforms()
+
+
+def read_rgb_image(path):
+    from PIL import Image, ImageOps
+
+    with Image.open(path) as source:
+        return ImageOps.exif_transpose(source).convert("RGB")
 
 
 class ChordImageDataset:
@@ -70,12 +77,8 @@ class ChordImageDataset:
         return len(self.samples)
 
     def __getitem__(self, index):
-        from PIL import Image, ImageOps
-
         path, label = self.samples[index]
-        with Image.open(path) as source:
-            image = ImageOps.exif_transpose(source).convert("RGB")
-        return self.transform(image), label
+        return self.transform(read_rgb_image(path)), label
 
 
 def split_dataset(root: Path, seed: int = 42):

@@ -1,14 +1,14 @@
 # Guitar-Chord-Detection-Computer-Vision-Model
-Computer vision model that uses hand and fretboard tracking to see if a user is playing a chord correctly.
+Classifies static guitar photos into 11 chords and returns a confidence score.
 
 ## Current baseline
 
-Python/PyTorch skeleton based on the project proposal: an 11-class CNN,
-RGB images resized to 128×128, small training-only rotations and brightness
-augmentation, cross-entropy loss, and a reproducible 70/20/10 split.
-The best validation-accuracy checkpoint is retained; evaluation uses only its
-held-out test split and reports accuracy and macro/per-class precision, recall,
-and F1. Prediction returns a chord and a softmax confidence score.
+The supplied YOLO export uses a pretrained ResNet-18 with a frozen backbone.
+Training fits the 11-class head using cross-entropy and saves the checkpoint
+with the highest validation macro F1. All splits and prediction use the same
+224×224 ResNet-18 preprocessing. Evaluation reports test accuracy and
+macro and per-class precision, recall, and F1. Prediction returns the top
+chord and its softmax score.
 
 Hand tracking, fretboard localization, webcam capture, and correctness feedback
 are future work. This baseline classifies whole images; its confidence is not
@@ -35,8 +35,8 @@ Jupyter is optional: `python -m pip install -e '.[notebook]'`.
 
 ## Dataset and commands
 
-The dataset is intentionally empty. See [data/README.md](data/README.md) for
-the required folder layout. No pretrained model or real training results are included.
+Extract the downloaded dataset under `data/raw`. See
+[data/README.md](data/README.md) for the required folder layout.
 
 Run from the repository root after adding images:
 
@@ -46,7 +46,8 @@ guitar-chords evaluate --checkpoint artifacts/model.pt
 guitar-chords predict --checkpoint artifacts/model.pt --image path/to/image.jpg
 ```
 
-Training selects CUDA when available and otherwise uses CPU. Checkpoints and raw
+Training selects CUDA when available and otherwise uses CPU. The first training
+run downloads the pretrained backbone weights. Checkpoints and raw
 data stay out of Git. Keep the original dataset paths available for test evaluation.
 
 Code lives in `src/guitar_chords/`; dependency-free split and metric tests live

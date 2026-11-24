@@ -1,7 +1,21 @@
-"""Small CNN baseline; no pretrained weights or downloads required."""
+"""Models for chord classification."""
 
 from torch import nn
 from . import CHORDS
+
+RESNET18 = "resnet18"
+RESNET18_PREPROCESSING = "ResNet18_Weights.IMAGENET1K_V1"
+
+
+def build_resnet18(*, pretrained=False):
+    from torchvision.models import ResNet18_Weights, resnet18
+
+    weights = ResNet18_Weights.IMAGENET1K_V1 if pretrained else None
+    model = resnet18(weights=weights)
+    if pretrained:
+        model.requires_grad_(False)
+    model.fc = nn.Linear(model.fc.in_features, len(CHORDS))
+    return model
 
 
 def build_model():
