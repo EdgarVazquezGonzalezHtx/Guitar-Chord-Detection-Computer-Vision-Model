@@ -93,6 +93,10 @@ def main():
         loader = DataLoader(training_data, batch_size=args.batch_size, shuffle=True, num_workers=8, pin_memory=True, persistent_workers=True)
         selection_metric = "macro_f1" if supplied_splits else "accuracy"
         best = -1.0
+        args.checkpoint.parent.mkdir(parents=True, exist_ok=True)
+        log = args.checkpoint.with_suffix(".jsonl").open("w", encoding="utf-8")
+        best_metrics = None
+        best_epoch = 0
         for epoch in range(args.epochs):
             # Freeze the backbone's batch normalization statistics during head training.
             if supplied_splits:
@@ -108,21 +112,37 @@ def main():
                 optimizer.step()
                 total += loss.item() * len(labels)
             metrics = evaluate(splits[1])
-            print(json.dumps({"epoch": epoch + 1, "train_loss": total / len(splits[0]), "validation": metrics}))
-            if metrics[selection_metric] > best:
+            record = {"epoch": epoch + 1, "train_loss": total / len(splits[0]), "validation": metrics}
+            log.write(json.dumps(record) + "\n")
+            log.flush()
+            improved = metrics[selection_metric] > best
+            print(f"epoch {epoch + 1:>3}/{args.epochs}  loss {record['train_loss']:.3f}  "
+                  f"val acc {metrics['accuracy']:.3f}  macro F1 {metrics['macro_f1']:.3f}"
+                  + ("  * saved" if improved else ""), flush=True)
+            if improved:
                 best = metrics[selection_metric]
-                args.checkpoint.parent.mkdir(parents=True, exist_ok=True)
-                checkpoint = {"state_dict": model.state_dict(), "classes": list(CHORDS),
-                              "seed": args.seed, "image_size": size, "splits": splits}
+                checkpoint = {"state_dict": model.state_dict(), "classes": list(CHORDS), "seed": args.seed, "lr": args.lr, "image_size": size, "splits": splits}
+                best_metrics = metrics
+                best_epoch = epoch + 1
                 if supplied_splits:
                     checkpoint.update(architecture=RESNET18, preprocessing=RESNET18_PREPROCESSING)
                 torch.save(checkpoint, args.checkpoint)
+        log.close()
+        print(f"Best validation {selection_metric}: {best:.3f} at epoch {best_epoch}  "
+              f"(checkpoint: {args.checkpoint}, full log: {log.name})")
+        print(f"{'chord':<6} {'prec':>6} {'recall':>7} {'F1':>6}")
+        for chord, m in best_metrics["per_class"].items():
+            print(f"{chord:<6} {m['precision']:>6.3f} {m['recall']:>7.3f} {m['f1']:>6.3f}")
     else:
         if checkpoint["classes"] != list(CHORDS) or checkpoint["image_size"] != size:
             parser.error("Checkpoint does not match this model's classes or image size")
         model.load_state_dict(checkpoint["state_dict"])
         if args.command == "evaluate":
-            print(json.dumps(evaluate(checkpoint["splits"][2]), indent=2))
+            results = evaluate(checkpoint["splits"][2])
+            print(f"Test accuracy {results['accuracy']:.3f}  macro F1 {results['macro_f1']:.3f}")
+            print(f"{'chord':<6} {'prec':>6} {'recall':>7} {'F1':>6}")
+            for chord, m in results["per_class"].items():
+                print(f"{chord:<6} {m['precision']:>6.3f} {m['recall']:>7.3f} {m['f1']:>6.3f}")
         else:
             model.eval()
             image = (resnet18_preprocessing()(read_rgb_image(args.image)) if supplied_splits
