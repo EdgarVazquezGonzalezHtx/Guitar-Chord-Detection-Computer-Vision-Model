@@ -18,6 +18,7 @@ def main():
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--unfreeze", action="store_true", help="fine-tune the whole nn")
     args = parser.parse_args()
     if args.epochs < 1 or args.batch_size < 1:
         parser.error("epochs and batch-size must be positive")
@@ -86,7 +87,11 @@ def main():
         return classification_metrics(actual, predicted, CHORDS)
 
     if args.command == "train":
-        trainable = model.fc.parameters() if supplied_splits else model.parameters()
+        finetune = supplied_splits and args.unfreeze
+        if finetune:
+            for parameter in model.parameters():
+                parameter.requires_grad_(True)
+        trainable = model.fc.parameters() if supplied_splits and not finetune else model.parameters()
         optimizer = torch.optim.Adam(trainable, lr=args.lr)
         loss_fn = torch.nn.CrossEntropyLoss()
         training_data = dataset(splits[0]) if supplied_splits else Images(splits[0], augment=True)
@@ -99,7 +104,7 @@ def main():
         best_epoch = 0
         for epoch in range(args.epochs):
             # Freeze the backbone's batch normalization statistics during head training.
-            if supplied_splits:
+            if supplied_splits and not finetune:
                 model.eval()
                 model.fc.train()
             else:
@@ -121,7 +126,8 @@ def main():
                   + ("  * saved" if improved else ""), flush=True)
             if improved:
                 best = metrics[selection_metric]
-                checkpoint = {"state_dict": model.state_dict(), "classes": list(CHORDS), "seed": args.seed, "lr": args.lr, "image_size": size, "splits": splits}
+                checkpoint = {"state_dict": model.state_dict(), "classes": list(CHORDS), "seed": args.seed, "lr": args.lr,
+                              "unfreeze": args.unfreeze, "image_size": size, "splits": splits}
                 best_metrics = metrics
                 best_epoch = epoch + 1
                 if supplied_splits:
