@@ -6,4 +6,5 @@ __pycache__/
 artifacts/
 data/raw/*
 !data/raw/.gitkeep
-/data/raw.zip
+/data/extra*/
+/data/merged/
