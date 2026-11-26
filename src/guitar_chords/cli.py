@@ -17,9 +17,12 @@ def main():
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--lr", type=float, default=1e-3)
     args = parser.parse_args()
     if args.epochs < 1 or args.batch_size < 1:
         parser.error("epochs and batch-size must be positive")
+    if args.lr <= 0:
+        parser.error("lr must be positive")
     if args.command == "predict" and args.image is None:
         parser.error("predict requires --image")
     if args.command == "train":
@@ -77,17 +80,17 @@ def main():
         model.eval()
         actual, predicted = [], []
         with torch.inference_mode():
-            for images, labels in DataLoader(dataset(samples), batch_size=args.batch_size):
+            for images, labels in DataLoader(dataset(samples), batch_size=args.batch_size, num_workers=8, pin_memory=True):
                 actual.extend(labels.tolist())
                 predicted.extend(model(images.to(device)).argmax(1).cpu().tolist())
         return classification_metrics(actual, predicted, CHORDS)
 
     if args.command == "train":
         trainable = model.fc.parameters() if supplied_splits else model.parameters()
-        optimizer = torch.optim.Adam(trainable, lr=.001)
+        optimizer = torch.optim.Adam(trainable, lr=args.lr)
         loss_fn = torch.nn.CrossEntropyLoss()
         training_data = dataset(splits[0]) if supplied_splits else Images(splits[0], augment=True)
-        loader = DataLoader(training_data, batch_size=args.batch_size, shuffle=True)
+        loader = DataLoader(training_data, batch_size=args.batch_size, shuffle=True, num_workers=8, pin_memory=True, persistent_workers=True)
         selection_metric = "macro_f1" if supplied_splits else "accuracy"
         best = -1.0
         for epoch in range(args.epochs):
